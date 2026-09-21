@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕵️ Word Detective Deluxe</title>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #1e293b; padding: 2rem; border-radius: 16px; text-align: center; width: 100%; max-width: 450px; border: 1px solid #334155; }
+        .hidden { display: none; }
+        h1 { margin-top: 0; color: #38bdf8; }
+        .form-group { margin: 15px 0; text-align: left; }
+        label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 0.9rem; }
+        select { width: 100%; padding: 10px; border-radius: 8px; background-color: #334155; color: white; border: 1px solid #475569; font-size: 1rem; outline: none; }
+        button { background-color: #0284c7; color: white; border: none; padding: 12px 20px; margin: 8px 0; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold; width: 100%; }
+        button:hover { background-color: #0369a1; }
+        .choice-btn { background-color: #334155; color: #f1f5f9; border: 1px solid #475569; }
+        .header-info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.9rem; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .hint-box { background: #0f172a; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 1.1rem; color: #f3f4f6; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px dashed #38bdf8; }
+        .review-item { background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: left; font-size: 0.9rem; border-left: 4px solid #ef4444; }
+        .wrong-ans { color: #f87171; text-decoration: line-through; }
+        .correct-ans { color: #4ade80; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div id="menu">
+            <h1>🕵️ Word Detective</h1>
+            <p style="color: #94a3b8;">เกมถอดรหัสคำใบ้</p>
+            
+            <div class="form-group">
+                <label for="category">เลือกหมวดหมู่:</label>
+                <select id="category">
+                    <option value="vocab">คำศัพท์ภาษาอังกฤษ</option>
+                    <option value="general">ความรู้ทั่วไป</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="difficulty">ระดับความยาก:</label>
+                <select id="difficulty">
+                    <option value="easy">ง่าย (คำใบ้ตรงๆ)</option>
+                    <option value="hard">ยาก (คำใบ้ปริศนาซับซ้อน)</option>
+                </select>
+            </div>
+
+            <button onclick="startGame()">🚀 เริ่มเกม</button>
+        </div>
+
+        <div id="game" class="hidden">
+            <div class="header-info">
+                <span id="progress">ข้อที่ 1/10</span>
+                <span id="score">คะแนน: 0</span>
+            </div>
+            <div class="hint-box" id="hint">คำใบ้...</div>
+            <div id="choices"></div>
+        </div>
+
+        <div id="result" class="hidden">
+            <h2>🎉 จบเกม!</h2>
+            <p>คะแนนรวมของคุณคือ</p>
+            <h1 id="final-score" style="font-size: 3rem; color: #4ade80; margin: 10px 0;">0</h1>
+            
+            <div id="review-container" style="max-height: 250px; overflow-y: auto; margin: 20px 0;"></div>
+
+            <button onclick="resetGame()">🔄 เล่นอีกครั้ง</button>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx = null;
+
+        function playSound(type) {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'correct') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(783.99, now + 0.1);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(196.00, now);
+                    osc.frequency.setValueAtTime(164.81, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                }
+            } catch (e) {
+                console.log('Audio disabled or not supported');
+            }
+        }
+
+        const questionBank = {
+            vocab: {
+                easy: [
+                    { h: "สัตว์เลี้ยงที่ร้อง 'เหมียว'", a: "Cat", c: ["Cat", "Dog", "Tiger", "Lion"] },
+                    { h: "ผลไม้สีน้ำตาล ข้างในสีเขียว มีขนเล็กๆ", a: "Kiwi", c: ["Apple", "Kiwi", "Mango", "Papaya"] },
+                    { h: "ยันต์ธรรมชาติกันฝนขณะเดินข้างนอก", a: "Umbrella", c: ["Shirt", "Hat", "Umbrella", "Shoes"] },
+                    { h: "ยานพาหนะที่มีสองล้อ ต้องปั่น", a: "Bicycle", c: ["Car", "Bicycle", "Train", "Plane"] },
+                    { h: "ราชาแห่งพงไพร คำรามเสียงดัง", a: "Lion", c: ["Dog", "Cat", "Lion", "Rabbit"] },
+                    { h: "สิ่งที่เราใช้อ่าน มีหน้ากระดาษเยอะๆ", a: "Book", c: ["Pen", "Book", "Ruler", "Eraser"] },
+                    { h: "ดาวเคราะห์สีฟ้าที่เราอาศัยอยู่", a: "Earth", c: ["Mars", "Earth", "Venus", "Sun"] },
+                    { h: "ของหวานสีขาว รสหวาน ได้มาจากแม่วัว", a: "Milk", c: ["Water", "Milk", "Juice", "Tea"] },
+                    { h: "ใช้วาดหรือเขียน สามารถลบด้วยยางลบได้", a: "Pencil", c: ["Pencil", "Pen", "Marker", "Crayon"] },
+                    { h: "อุปกรณ์บอกเวลา อยู่บนข้อมือหรือผนัง", a: "Clock", c: ["Phone", "Clock", "TV", "Mirror"] }
+                ],
+                hard: [
+                    { h: "ยิ่งตัด ยิ่งยาวขึ้น (เกี่ยวกับเส้นทาง/วัตถุ)", a: "Road", c: ["Rope", "Hair", "Road", "Tree"] },
+                    { h: "ฉันมีคอแต่ไม่มีหัว มีแขนแต่ไม่มีมือ", a: "Shirt", c: ["Bottle", "Shirt", "Guitar", "Clock"] },
+                    { h: "ฉันเดินได้โดยไม่มีขา และร้องไห้ได้โดยไม่มีตา", a: "Cloud", c: ["Wind", "Cloud", "River", "Ghost"] },
+                    { h: "ฉันก้าวไปข้างหน้าได้ แต่ถอยหลังไม่ได้บนกระดานหมากรุก", a: "Pawn", c: ["Knight", "Rook", "Pawn", "King"] },
+                    { h: "มองเห็นได้ในความมืด แต่หายไปเมื่อมีแสงสว่างฉายใส่", a: "Shadow", c: ["Shadow", "Star", "Firefly", "Moon"] },
+                    { h: "มีกุญแจหลายดอก แต่เปิดประตูไม่ได้สักบาน", a: "Piano", c: ["Map", "Keyboard", "Piano", "Lock"] },
+                    { h: "ฉันมีหลายชั้นแต่ไม่ใช่หัวหอม ยิ่งอ่านยิ่งได้ความรู้", a: "Book", c: ["Book", "Atmosphere", "Building", "Cake"] },
+                    { h: "ยิ่งคุณเอาออกไปมากเท่าไร ฉันยิ่งใหญ่ขึ้นเท่านั้น", a: "Hole", c: ["Hole", "Balloon", "Money", "Box"] },
+                    { h: "วิ่งอยู่ตลอดเวลา แต่ไม่เคยเหนื่อยและไม่มีขา", a: "Time", c: ["River", "Time", "Wind", "Runner"] },
+                    { h: "เบาเหมือนขนนก แต่คนที่แข็งแรงที่สุดก็ถือไว้ได้ไม่เกิน 5 นาที", a: "Breath", c: ["Breath", "Paper", "Feather", "Air"] }
+                ]
+            },
+            general: {
+                easy: [
+                    { h: "เมืองหลวงของประเทศไทย", a: "กรุงเทพฯ", c: ["กรุงเทพฯ", "เชียงใหม่", "ภูเก็ต", "พัทยา"] },
+                    { h: "หนึ่งปีมีกี่เดือน", a: "12 เดือน", c: ["10 เดือน", "12 เดือน", "24 เดือน", "365 เดือน"] },
+                    { h: "แม่น้ำสายที่ยาวที่สุดในประเทศไทย", a: "แม่น้ำชี", c: ["แม่น้ำเจ้าพระยา", "แม่น้ำชี", "แม่น้ำมูล", "แม่น้ำแม่กลอง"] },
+                    { h: "สีประจำวันอาทิตย์", a: "สีแดง", c: ["สีเหลือง", "สีแดง", "สีชมพู", "สีฟ้า"] },
+                    { h: "อวัยวะที่ใช้ในการฟังเสียง", a: "หู", c: ["ตา", "จมูก", "หู", "ปาก"] },
+                    { h: "ดวงอาทิตย์ขึ้นทางทิศใด", a: "ทิศตะวันออก", c: ["ทิศเหนือ", "ทิศใต้", "ทิศตะวันออก", "ทิศตะวันตก"] },
+                    { h: "สัตว์อะไรบินได้และเป็นสัตว์เลี้ยงลูกด้วยนม", a: "ค้างคาว", c: ["นก", "ผีเสื้อ", "ค้างคาว", "แมลงวัน"] },
+                    { h: "ธนบัตรใบละ 100 บาท มีสีอะไร", a: "สีแดง", c: ["สีเขียว", "สีแดง", "สีฟ้า", "สีม่วง"] },
+                    { h: "เครื่องปรุงที่ให้รสเค็มหลักๆ ในครัว", a: "เกลือ", c: ["น้ำตาล", "เกลือ", "พริก", "น้ำส้มสายชู"] },
+                    { h: "ก๊าซที่มนุษย์ใช้หายใจเข้า", a: "ออกซิเจน", c: ["คาร์บอนไดออกไซด์", "ออกซิเจน", "ไนโตรเจน", "ฮีเลียม"] }
+                ],
+                hard: [
+                    { h: "สัญลักษณ์ทางเคมีของ 'ทองคำ' คืออะไร", a: "Au", c: ["Ag", "Au", "Fe", "Cu"] },
+                    { h: "ดาวเคราะห์ที่ได้ชื่อว่าเป็น 'ดาวฝาแฝดของโลก'", a: "ดาวศุกร์", c: ["ดาวอังคาร", "ดาวศุกร์", "ดาวพุธ", "ดาวพฤหัสบดี"] },
+                    { h: "ประเทศใดมีพื้นที่ใหญ่ที่สุดในโลก", a: "รัสเซีย", c: ["จีน", "แคนาดา", "สหรัฐอเมริกา", "รัสเซีย"] },
+                    { h: "อวัยวะใดในร่างกายมนุษย์ที่สามารถงอกใหม่เองได้บางส่วน", a: "ตับ", c: ["หัวใจ", "ปอด", "ตับ", "ไต"] },
+                    { h: "ใยสไปเดอร์แมน (ใยชักมอง) ทำมาจากสารประเภทใด", a: "โปรตีน", c: ["คาร์โบไฮเดรต", "โปรตีน", "ไขมัน", "พลาสติก"] },
+                    { h: "สิ่งก่อสร้างโบราณใดที่เป็น 1 ใน 7 สิ่งมหัศจรรย์ของโลกยุคโบราณที่ยังคงอยู่", a: "พีระมิดกิซา", c: ["สวนลอยบาบิโลน", "พีระมิดกิซา", "ประภาคารประตูปากน้ำ", "รูปสลักซูส"] },
+                    { h: "ก๊าซที่มีปริมาณมากที่สุดในบรรยากาศของโลก", a: "ไนโตรเจน", c: ["ออกซิเจน", "คาร์บอนไดออกไซด์", "ไนโตรเจน", "อาร์กอน"] },
+                    { h: "สัตว์ชนิดใดมีหัวใจถึง 3 ดวง", a: "หมึกยักษ์", c: ["วาฬ", "หมึกยักษ์", "ฉลาม", "กุ้ง"] },
+                    { h: "กระดูกที่ยาวที่สุดในร่างกายมนุษย์คือกระดูกส่วนใด", a: "กระดูกต้นขา", c: ["กระดูกสันหลัง", "กระดูกแขน", "กระดูกต้นขา", "กระดูกซี่โครง"] },
+                    { h: "นักวิทยาศาสตร์คนใดเป็นผู้ค้นพบยาปฏิชีวนะ 'เพนนิซิลลิน'", a: "อเล็กซานเดอร์ เฟลมมิง", c: ["หลุยส์ ปาสเตอร์", "อเล็กซานเดอร์ เฟลมมิง", "ไอแซก นิวตัน", "อัลเบิร์ต ไอสไตน์"] }
+                ]
+            }
+        };
+
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let wrongAnswers = [];
+
+        function startGame() {
+            const cat = document.getElementById('category').value;
+            const diff = document.getElementById('difficulty').value;
+
+            currentQuestions = [...questionBank[cat][diff]];
+            currentQuestions.sort(() => Math.random() - 0.5);
+
+            currentIndex = 0;
+            score = 0;
+            wrongAnswers = [];
+
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = currentQuestions[currentIndex];
+            
+            document.getElementById('progress').textContent = `ข้อที่ ${currentIndex + 1}/10`;
+            document.getElementById('score').textContent = `คะแนน: ${score}`;
+            document.getElementById('hint').textContent = q.h;
+
+            const choicesContainer = document.getElementById('choices');
+            choicesContainer.innerHTML = '';
+
+            const shuffledChoices = [...q.c].sort(() => Math.random() - 0.5);
+
+            shuffledChoices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.textContent = choice;
+                btn.onclick = () => checkAnswer(choice, q);
+                choicesContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, q) {
+            if (selected === q.a) {
+                playSound('correct');
+                score += 10;
+            } else {
+                playSound('wrong');
+                wrongAnswers.push({
+                    hint: q.h,
+                    userAns: selected,
+                    correctAns: q.a
+                });
+            }
+
+            currentIndex++;
+
+            if (currentIndex < 10) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('game').classList.add('hidden');
+            document.getElementById('result').classList.remove('hidden');
+            document.getElementById('final-score').textContent = score;
+
+            const reviewContainer = document.getElementById('review-container');
+            reviewContainer.innerHTML = '';
+
+            if (wrongAnswers.length === 0) {
+                reviewContainer.innerHTML = '<p style="color: #4ade80;">🌟 สุดยอดมาก! คุณตอบถูกหมดทุกข้อเลย!</p>';
+            } else {
+                const title = document.createElement('h3');
+                title.style.color = '#f87171';
+                title.style.textAlign = 'left';
+                title.textContent = `📌 ทบทวนข้อที่ตอบผิด (${wrongAnswers.length} ข้อ):`;
+                reviewContainer.appendChild(title);
+
+                wrongAnswers.forEach((item) => {
+                    const div = document.createElement('div');
+                    div.className = 'review-item';
+                    div.innerHTML = `
+                        <div><strong>คำใบ้:</strong> ${item.hint}</div>
+                        <div>คุณตอบ: <span class="wrong-ans">${item.userAns}</span></div>
+                        <div>คำตอบที่ถูกต้อง: <span class="correct-ans">${item.correctAns}</span></div>
+                    `;
+                    reviewContainer.appendChild(div);
+                });
+            }
+        }
+
+        function resetGame() {
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
