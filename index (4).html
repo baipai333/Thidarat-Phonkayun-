@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมตะลุยโลกวิทยาศาสตร์ 5 ด่าน (Science Quest)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Kanit', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0e1e38, #1a365d);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            text-align: center;
+        }
+
+        h1 {
+            color: #00f2fe;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #4facfe;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00c6ff;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #6a11cb, #2575fc);
+        }
+
+        .btn-option {
+            display: block;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-option:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-option.correct {
+            background: #28a745 !important;
+        }
+
+        .btn-option.wrong {
+            background: #dc3545 !important;
+        }
+
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .badge {
+            background: #ff007f;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .rank-box {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 18px;
+            border: 1px dashed #00f2fe;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-card">
+        <!-- 1. หน้าเริ่มเกม -->
+        <div id="start-screen">
+            <h1>🔬 Science Quest</h1>
+            <p>เกมตะลุยโลกวิทยาศาสตร์ 5 มิติ</p>
+            <p>ทดสอบความรู้: เคมี | ชีวะ | ฟิสิกส์ | โลก | ห้องทดลอง</p>
+            <br>
+            <button class="btn" onclick="startGame()">เริ่มเล่นเกมเลย!</button>
+            <button class="btn btn-secondary" onclick="showHowToPlay()">วิธีเล่น</button>
+        </div>
+
+        <!-- 2. หน้าวิธีเล่น -->
+        <div id="howto-screen" class="hidden">
+            <h2>📜 วิธีเล่น</h2>
+            <div style="text-align: left; line-height: 1.6;">
+                <ul>
+                    <li>เกมมีทั้งหมด <b>5 ด่าน</b> ด่านละ <b>5 ข้อ</b> (รวม 25 ข้อ)</li>
+                    <li>แต่ละข้อมีเวลาให้คิด และตอบได้เพียงครั้งเดียว</li>
+                    <li>ตอบถูกได้ข้อละ <b>1 คะแนน</b> (คะแนนเต็ม 25 คะแนน)</li>
+                    <li>เมื่อเล่นจบ จะมีการประเมินฉายา/ระดับความสามารถทางวิทยาศาสตร์ให้!</li>
+                </ul>
+            </div>
+            <button class="btn" onclick="showStartScreen()">ย้อนกลับ</button>
+        </div>
+
+        <!-- 3. หน้าเล่นเกม -->
+        <div id="quiz-screen" class="hidden">
+            <div class="hud">
+                <span>ด่านที่: <b id="stage-num" style="color:#00f2fe;">1/5</b> <span id="stage-name" class="badge">เคมี</span></span>
+                <span>ข้อที่: <b id="question-num">1/5</b></span>
+                <span>คะแนน: <b id="score-num" style="color:#28a745;">0</b></span>
+            </div>
+
+            <h3 id="question-text" style="min-height: 60px; text-align: left;">คำถามจะปรากฏที่นี่?</h3>
+
+            <div id="options-container">
+                <!-- ตัวเลือกจะถูกสร้างด้วย JS -->
+            </div>
+        </div>
+        <!-- 4. หน้าสรุปผลคะแนน -->
+        <div id="result-screen" class="hidden">
+            <h2>🎉 สรุปผลการแข่งขัน</h2>
+            <p>คุณทำคะแนนรวมได้:</p>
+            <h1 id="final-score" style="font-size: 48px; color: #ffeb3b; margin: 10px 0;">0 / 25</h1>
+            
+            <div class="rank-box">
+                <p style="margin: 0;">ระดับความเก่งของคุณ:</p>
+                <h3 id="rank-title" style="color: #00f2fe; margin: 10px 0 0 0;">-</h3>
+            </div>
+
+            <button class="btn" onclick="restartGame()">เล่นอีกครั้ง</button>
+        </div>
+    </div>
+
+    <script>
+        // ข้อมูลคำถาม 5 ด่าน ด่านละ 5 ข้อ
+        const stages = [
+            {
+                name: "เคมี (Chemistry)",
+                questions: [
+                    { q: "1. สัญลักษณ์ทางเคมีของ 'ทองคำ' คืออะไร?", options: ["Au", "Ag", "Fe", "Cu"], answer: 0 },
+                    { q: "2. ก๊าซใดมีปริมาณมากที่สุดในบรรยากาศของโลก?", options: ["ออกซิเจน", "ไนโตรเจน", "คาร์บอนไดออกไซด์", "ไฮโดรเจน"], answer: 1 },
+                    { q: "3. สารที่มีค่า pH เท่ากับ 3 มีสมบัติเป็นอะไร?", options: ["กรด", "เบส", "กลาง", "เป็นเค็ม"], answer: 0 },
+                    { q: "4. น้ำบริสุทธิ์ (H2O) มีสถานะเป็นแก๊สที่อุณหภูมิกี่องศาเซลเซียสขึ้นไป (ที่ความดันปกติ)?", options: ["50 °C", "80 °C", "100 °C", "120 °C"], answer: 2 },
+                    { q: "5. ธาตุใดเป็นส่วนประกอบหลักของ 'เพชร' และ 'ถ่าน'?", options: ["เหล็ก", "คาร์บอน", "แคลเซียม", "โซเดียม"], answer: 1 }
+                ]
+            },
+            {
+                name: "ชีววิทยา (Biology)",
+                questions: [
+                    { q: "1. อวัยวะใดของพืชทำหน้าที่สังเคราะห์ด้วยแสงเป็นหลัก?", options: ["ราก", "ลำต้น", "ใบ", "ดอก"], answer: 2 },
+                    { q: "2. หน่วยที่เล็กที่สุดของสิ่งมีชีวิตคืออะไร?", options: ["อะตอม", "เซลล์", "เนื้อเยื่อ", "อวัยวะ"], answer: 1 },
+                    { q: "3. เลือดสีแดงของมนุษย์เกิดจากเม็ดเลือดแดงมีสารใดเป็นองค์ประกอบ?", options: ["ฮีโมโกลบิน", "คลอโรฟิลล์", "อินซูลิน", "คอลลาเจน"], answer: 0 },
+                    { q: "4. สัตว์ชนิดใดเป็นสัตว์เลี้ยงลูกด้วยนม?", options: ["ฉลาม", "วาฬ", "ปลากระเบน", "กบ"], answer: 1 },
+                    { q: "5. กระบวนการใดที่พืชใช้ดูดน้ำจากดินเข้าสู่ราก?", options: ["การแพร่", "ออสโมซิส", "การหายใจ", "การคายน้ำ"], answer: 1 }
+                ]
+            },
+            {
+                name: "ฟิสิกส์ (Physics)",
+                questions: [
+                    { q: "1. หน่วยวัดแรงตามระบบ SI คืออะไร?", options: ["จูล (J)", "วัตต์ (W)", "นิวตัน (N)", "ปาสคาล (Pa)"], answer: 2 },
+                    { q: "2. เสียงเดินทางได้ดีที่สุดในสถานะใด?", options: ["ของแข็ง", "ของเหลว", "แก๊ส", "สุญญากาศ"], answer: 0 },
+                    { q: "3. เครื่องมือใดใช้สำหรับวัดกระแสไฟฟ้า?", options: ["โวลต์มิเตอร์", "แอมมิเตอร์", "เทอร์โมมิเตอร์", "บารอมิเตอร์"], answer: 1 },
+                    { q: "4. แสงเดินทางด้วยความเร็วประมาณเท่าใดในสุญญากาศ?", options: ["300,000 กิโลเมตร/วินาที", "100,000 กิโลเมตร/วินาที", "3,000 กิโลเมตร/วินาที", "30,000 กิโลเมตร/วินาที"], answer: 0 },
+                    { q: "5. แรงที่ดึงดูดวัตถุเข้าหาศูนย์กลางของโลกเรียกว่าอะไร?", options: ["แรงเสียดทาน", "แรงโน้มถ่วง", "แรงดัน", "แรงลอยตัว"], answer: 1 }
+                ]
+            },
+            {
+                name: "โลกและสิ่งแวดล้อม (Earth & Env)",
+                questions: [
+                    { q: "1. หินที่เกิดจากการเย็นตัวของลาวาหรือแมกมาคือหินชนิดใด?", options: ["หินชั้น", "หินอัคนี", "หินแปร", "หินตะกอน"], answer: 1 },
+                    { q: "2. ชั้นบรรยากาศใดที่มนุษย์อยู่อาศัยและเกิดปรากฏการณ์ทางฝนฟ้าอากาศ?", options: ["โทรโพสเฟียร์", "สตราโตสเฟียร์", "มีโซสเฟียร์", "เทอร์โมสเฟียร์"], answer: 0 },
+                    { q: "3. แก๊สเรือนกระจกตัวใดที่ปล่อยออกมามากที่สุดจากการเผาไหม้เชื้อเพลิงฟอสซิล?", options: ["มีเทน", "คาร์บอนไดออกไซด์", "โอโซน", "ซีเอฟซี"], answer: 1 },
+                    { q: "4. ปรากฏการณ์ที่ดวงจันทร์โคจรมาอยู่ระหว่างโลกกับดวงอาทิตย์เรียกว่าอะไร?", options: ["จันทรุปราคา", "สุริยุปราคา", "น้ำขึ้นน้ำลง", "ฤดูกาล"], answer: 1 },
+                    { q: "5. ดาวเคราะห์ดวงใดได้ชื่อว่า 'ดาวเคราะห์สีแดง'?", options: ["ดาวพุธ", "ดาวศุกร์", "ดาวอังคาร", "ดาวเสาร์"], answer: 2 }
+                ]
+            },
+            {
+                name: "วิทย์ทั่วไป & ห้องทดลอง (General Science)",
+                questions: [
+                    { q: "1. อุปกรณ์ใดในห้องทดลองใช้สำหรับตวงปริมาตรของเหลวอย่างแม่นยำ?", options: ["บีเกอร์", "กระบอกตวง", "หลอดทดลอง", "จานเพาะเชื้อ"], answer: 1 },
+                    { q: "2. หากสารเคมีที่มีฤทธิ์เป็นกรดสัมผัสผิวหนัง ควรทำอย่างไรเป็นอันดับแรก?", options: ["ทาครีมทันที", "ล้างด้วยน้ำสะอาดปริมาณมาก", "ใช้ผ้าเช็ดแรงๆ", "ปล่อยไว้ให้แห้ง"], answer: 1 },
+                    { q: "3. กล้องจุลทรรศน์ใช้สำหรับทำอะไร?", options: ["ส่องดูดาว", "ขยายภาพวัตถุขนาดเล็กมาก", "วัดอุณหภูมิ", "ฟังเสียงหัวใจ"], answer: 1 },
+                    { q: "4. ข้อใดเป็นสัญลักษณ์ความปลอดภัยที่เป็นรูป 'เปลวไฟ'?", options: ["สารพิษ", "สารกัดกร่อน", "สารไวไฟ", "สารกัมมันตรังสี"], answer: 2 },
+                    { q: "5. กระบวนการทางวิทยาศาสตร์ขั้นตอนแรกคือข้อใด?", options: ["ตั้งสมมติฐาน", "ทำการทดลอง", "การสังเกตและตั้งปัญหา", "สรุปผล"], answer: 2 }
+                ]
+            }
+        ];
+
+        // ตัวแปรควบคุมเกม
+        let currentStage = 0;
+        let currentQuestion = 0;
+        let score = 0;
+        let canAnswer = true;
+
+        // ฟังก์ชันสลับหน้าจอ
+        function showScreen(screenId) {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('howto-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function showStartScreen() { showScreen('start-screen'); }
+        function showHowToPlay() { showScreen('howto-screen'); }
+
+        // เริ่มเกม
+        function startGame() {
+            currentStage = 0;
+            currentQuestion = 0;
+            score = 0;
+            showScreen('quiz-screen');
+            loadQuestion();
+        }
+
+        // โหลดโจทย์
+        function loadQuestion() {
+            canAnswer = true;
+            const stage = stages[currentStage];
+            const q = stage.questions[currentQuestion];
+
+            // อัปเดต HUD
+            document.getElementById('stage-num').innerText = `${currentStage + 1}/5`;
+            document.getElementById('stage-name').innerText = stage.name;
+            document.getElementById('question-num').innerText = `${currentQuestion + 1}/5`;
+            document.getElementById('score-num').innerText = score;
+
+            // แสดงคำถาม
+            document.getElementById('question-text').innerText = q.q;
+
+            // สร้างตัวเลือก
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-option';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        // ตรวจคำตอบ
+        function checkAnswer(selectedIndex, selectedBtn) {
+            if (!canAnswer) return;
+            canAnswer = false;
+
+            const q = stages[currentStage].questions[currentQuestion];
+            const options = document.querySelectorAll('.btn-option');
+
+            if (selectedIndex === q.answer) {
+                selectedBtn.classList.add('correct');
+                score++;
+                document.getElementById('score-num').innerText = score;
+            } else {
+                selectedBtn.classList.add('wrong');
+                options[q.answer].classList.add('correct'); // เฉลยข้อที่ถูก
+            }
+
+            // รอ 1.2 วินาทีแล้วไปข้อถัดไป
+            setTimeout(() => {
+                currentQuestion++;
+                if (currentQuestion >= 5) {
+                    currentQuestion = 0;
+                    currentStage++;
+                }
+
+                if (currentStage >= stages.length) {
+                    showResult();
+                } else {
+                    loadQuestion();
+                }
+            }, 1200);
+        }
+
+        // แสดงหน้าสรุปผล และประเมินระดับ
+        function showResult() {
+            showScreen('result-screen');
+            document.getElementById('final-score').innerText = `${score} / 25`;
+
+            const rankTitle = document.getElementById('rank-title');
+            
+            // ประเมินระดับความยาก/เกรด
+            if (score === 25) {
+                rankTitle.innerText = "🏆 ด็อกเตอร์วิทยาศาสตร์ขั้นเทพ (เกรด A+)";
+            } else if (score >= 20) {
+                rankTitle.innerText = "🥇 นักวิทยาศาสตร์รุ่นเยาว์สุดอัจฉริยะ (เกรด A)";
+            } else if (score >= 15) {
+                rankTitle.innerText = "🥈 ผู้เชี่ยวชาญห้องทดลอง (เกรด B)";
+            } else if (score >= 10) {
+                rankTitle.innerText = "🥉 นักฝึกหัดทดลองวิทยาศาสตร์ (เกรด C)";
+            } else {
+                rankTitle.innerText = "🌱 นักเรียนผู้กำลังเริ่มต้นเรียนรู้ (ต้องพยายามอีกนิดนะ!)";
+            }
+        }
+
+        function restartGame() {
+            startGame();
+        }
+    </script>
+</body>
+</html>
